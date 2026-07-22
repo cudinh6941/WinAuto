@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend">
+
+    <!-- ================================================================== -->
+    <!-- GIAI ĐOẠN 1: windowsPE - CÀI ĐẶT LÕI                             -->
+    <!-- CHẾ ĐỘ AN TOÀN: Không format toàn bộ ổ, chỉ cài đè lên C:        -->
+    <!-- ================================================================== -->
+    <settings pass="windowsPE">
+        <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS"
+            xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <SetupUILanguage>
+                <UILanguage>en-US</UILanguage>
+            </SetupUILanguage>
+            <InputLocale>0409:00000409</InputLocale>
+            <SystemLocale>en-US</SystemLocale>
+            <UILanguage>en-US</UILanguage>
+            <UserLocale>en-US</UserLocale>
+        </component>
+
+        <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS"
+            xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+            <!-- ========== PRODUCT KEY + EULA ========== -->
+            <UserData>
+                <ProductKey>
+                    <!-- Generic Key cho Windows 10 Home -->
+                    <Key>YTMG3-N6DKC-DKB77-7M9GH-8HVX7</Key>
+                    <WillShowUI>OnError</WillShowUI>
+                </ProductKey>
+                <AcceptEula>true</AcceptEula>
+            </UserData>
+
+            <!-- ========== CÀI WINDOWS VÀO PARTITION HIỆN TẠI ========== -->
+            <!-- Không có DiskConfiguration → giữ nguyên partition layout -->
+            <!-- Chỉ format partition C: cũ, KHÔNG đụng D: hay partition khác -->
+            <ImageInstall>
+                <OSImage>
+                    <InstallFrom>
+                        <MetaData wcm:action="add">
+                            <Key>/IMAGE/INDEX</Key>
+                            <Value>1</Value>
+                        </MetaData>
+                    </InstallFrom>
+                    <InstallTo>
+                        <!-- Giá trị này được prepare.ps1 tự động thay thế -->
+                        <DiskID>{{DISK_ID}}</DiskID>
+                        <PartitionID>{{PARTITION_ID}}</PartitionID>
+                    </InstallTo>
+                </OSImage>
+            </ImageInstall>
+        </component>
+    </settings>
+
+    <!-- ================================================================== -->
+    <!-- GIAI ĐOẠN 1.5: specialize - TWEAK REGISTRY BỎ QUA OOBE MẠNG        -->
+    <!-- ================================================================== -->
+    <settings pass="specialize">
+        <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS"
+            xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <RunSynchronous>
+                <!-- Bypass NRO (Bo qua bat buoc ket noi mang) -->
+                <RunSynchronousCommand wcm:action="add">
+                    <Order>1</Order>
+                    <Path>reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE /v BypassNRO /t REG_DWORD /d 1 /f</Path>
+                </RunSynchronousCommand>
+                <!-- Disable Privacy Settings Experience -->
+                <RunSynchronousCommand wcm:action="add">
+                    <Order>2</Order>
+                    <Path>reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\OOBE /v DisablePrivacyExperience /t REG_DWORD /d 1 /f</Path>
+                </RunSynchronousCommand>
+            </RunSynchronous>
+        </component>
+    </settings>
+
+    <!-- ================================================================== -->
+    <!-- GIAI ĐOẠN 2: oobeSystem - BỎ QUA OOBE, TẠO USER, CẤU HÌNH       -->
+    <!-- ================================================================== -->
+    <settings pass="oobeSystem">
+        <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS"
+            xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <InputLocale>0409:00000409</InputLocale>
+            <SystemLocale>en-US</SystemLocale>
+            <UILanguage>en-US</UILanguage>
+            <UserLocale>en-US</UserLocale>
+        </component>
+
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS"
+            xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+            <!-- ========== BỎ QUA TOÀN BỘ OOBE ========== -->
+            <OOBE>
+                <HideEULAPage>true</HideEULAPage>
+                <HideLocalAccountScreen>true</HideLocalAccountScreen>
+                <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
+                <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+                <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+                <NetworkLocation>Home</NetworkLocation>
+                <ProtectYourPC>3</ProtectYourPC>
+                <SkipUserOOBE>true</SkipUserOOBE>
+                <SkipMachineOOBE>true</SkipMachineOOBE>
+            </OOBE>
+
+            <!-- ========== TỰ ĐỘNG ĐĂNG NHẬP ADMINISTRATOR ========== -->
+            <AutoLogon>
+                <Password>
+                    <Value></Value>
+                    <PlainText>true</PlainText>
+                </Password>
+                <Enabled>true</Enabled>
+                <LogonCount>9999</LogonCount>
+                <Username>Administrator</Username>
+            </AutoLogon>
+
+            <!-- ========== KÍCH HOẠT TÀI KHOẢN ADMINISTRATOR ========== -->
+            <UserAccounts>
+                <AdministratorPassword>
+                    <Value></Value>
+                    <PlainText>true</PlainText>
+                </AdministratorPassword>
+            </UserAccounts>
+
+            <!-- ========== MÚI GIỜ VIỆT NAM ========== -->
+            <TimeZone>SE Asia Standard Time</TimeZone>
+        </component>
+    </settings>
+
+</unattend>
