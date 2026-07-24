@@ -105,35 +105,10 @@ if ($netChoice -eq "1") {
         exit 1
     }
 
-    # Tu dong sinh WlanProfile.xml
-    $wlanXmlContent = @"
-<?xml version="1.0"?>
-<WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">
-    <name>$wifiName</name>
-    <SSIDConfig>
-        <SSID><name>$wifiName</name></SSID>
-    </SSIDConfig>
-    <connectionType>ESS</connectionType>
-    <connectionMode>auto</connectionMode>
-    <MSM>
-        <security>
-            <authEncryption>
-                <authentication>WPA2PSK</authentication>
-                <encryption>AES</encryption>
-                <useOneX>false</useOneX>
-            </authEncryption>
-            <sharedKey>
-                <keyType>passPhrase</keyType>
-                <protected>false</protected>
-                <keyMaterial>$wifiPass</keyMaterial>
-            </sharedKey>
-        </security>
-    </MSM>
-</WLANProfile>
-"@
-    $wlanOutputPath = Join-Path $scriptsDir "WlanProfile.xml"
-    $wlanXmlContent | Out-File -FilePath $wlanOutputPath -Encoding UTF8 -Force
-    Write-Ok "Da tao WlanProfile.xml: '$wifiName'"
+    # Luu thong tin WiFi vao file text de setup-anydesk.ps1 tu dong thu nhieu chuan bao mat khac nhau
+    $wifiCredPath = Join-Path $scriptsDir "wifi_credentials.txt"
+    "$wifiName`n$wifiPass" | Out-File -FilePath $wifiCredPath -Encoding UTF8 -Force
+    Write-Ok "Da tao wifi_credentials.txt cho mạng: '$wifiName'"
 } else {
     Write-Ok "Bo qua WiFi - se dung day LAN"
 }

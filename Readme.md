@@ -110,3 +110,13 @@ Log ghi chi tiết: cài driver, WiFi, AnyDesk, Telegram — mỗi bước có t
 - Win 11 đã có bypass TPM/SecureBoot/RAM
 - Nếu không nhận Telegram sau 30 phút → WiFi profile có thể sai → cần ra tận nơi check
 - File `AnyDesk.lnk` là shortcut, **không phải installer**
+
+---
+
+## 🔒 TODO: Kế hoạch Bảo vệ & Quản lý Script (Sau khi hoàn tất)
+
+- [ ] **Đóng gói thành EXE:** Dùng `PS2EXE` chuyển `prepare.ps1` thành file thực thi duy nhất để giấu mã nguồn và các file XML.
+- [ ] **Tích hợp giới hạn (Time-bomb / Telegram 2FA):** 
+  - Đặt hạn sử dụng cứng (VD: 3 tháng) vào file EXE.
+  - *Hoặc* tích hợp cơ chế báo cáo & chờ duyệt OTP qua Telegram Bot trước khi cho phép chạy `setup.exe`.
+- [ ] **Thêm Watermark:** Khẳng định quyền tác giả trong banner của tool.

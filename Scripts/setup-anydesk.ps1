@@ -54,75 +54,121 @@ Write-Log "Cho 15 giay cho he thong on dinh..."
 Start-Sleep -Seconds 15
 
 # ==================== BUOC 1: CAI DRIVER MANG (3DP NET) ====================
-$driverInstaller = "C:\Windows\Setup\Scripts\3dpnet.exe"
-if (Test-Path $driverInstaller) {
-    Write-Log "Dang cai driver mang 3DP Net..."
-    try {
-        # Chay 3DP Net - dat timeout 120 giay
-        # Neu no hien GUI (khong silent duoc) thi tu kill sau 120s
-        $proc = Start-Process -FilePath $driverInstaller -ArgumentList "/S", "/D=C:\3DPNet" -PassThru
-        $timeout = 120
-        $waited = 0
-        while (-not $proc.HasExited -and $waited -lt $timeout) {
-            Start-Sleep -Seconds 5
-            $waited += 5
-            Write-Log "3DP Net: Dang cho... ($waited/$timeout giay)"
+$wifiAdapters = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "Wi-Fi|Wireless|WLAN" -or $_.InterfaceDescription -match "Wi-Fi|Wireless|WLAN|802\.11" }
+
+if (-not $wifiAdapters) {
+    $driverInstaller = "C:\Windows\Setup\Scripts\3dpnet.exe"
+    if (Test-Path $driverInstaller) {
+        Write-Log "Khong thay driver WiFi, dang cai 3DP Net tu dong..."
+        try {
+            $proc = Start-Process -FilePath $driverInstaller -ArgumentList "-y", "-gm2", "-o`"C:\3DPNet`"" -PassThru
+            Write-Log "3DP Net: Dang cho giai nen..."
+            $proc | Wait-Process -Timeout 60 -ErrorAction SilentlyContinue
+            
+            if (-not $proc.HasExited) {
+                Write-Log "3DP Net: Giai nen qua 60s, bo qua cho..."
+            } else {
+                Write-Log "3DP Net: Giai nen xong!"
+            }
+            Write-Log "3DP Net: Doi driver load (15s)..."
+            Start-Sleep -Seconds 15
+        } catch {
+            Write-Log "3DP Net: Loi cai dat - $($_.Exception.Message)"
         }
-        if (-not $proc.HasExited) {
-            Write-Log "3DP Net: Qua timeout ${timeout}s - co the dang hien GUI. Kill va tiep tuc..."
-            $proc | Stop-Process -Force -ErrorAction SilentlyContinue
-        } else {
-            Write-Log "3DP Net: Cai xong!"
-        }
-        Write-Log "3DP Net: Cho driver load..."
-        Start-Sleep -Seconds 20
-    } catch {
-        Write-Log "3DP Net: Loi cai dat - $($_.Exception.Message)"
+    } else {
+        Write-Log "3DP Net: Khong tim thay file tai $driverInstaller - bo qua"
     }
 } else {
-    Write-Log "3DP Net: Khong tim thay file tai $driverInstaller - bo qua"
+    Write-Log "Da co san driver WiFi, bo qua cai 3DP Net."
 }
 
 
 # ==================== BUOC 2: KET NOI WI-FI ====================
-$wlanProfile = "C:\Windows\Setup\Scripts\WlanProfile.xml"
+$wifiCredPath = "C:\Windows\Setup\Scripts\wifi_credentials.txt"
 
-if (Test-Path $wlanProfile) {
+if (Test-Path $wifiCredPath) {
     try {
-        [xml]$wlanXml = Get-Content $wlanProfile -Encoding UTF8
-        $wifiName = $wlanXml.WLANProfile.name
-        Write-Log "WiFi: Doc duoc ten tu profile: '$wifiName'"
+        $creds = Get-Content $wifiCredPath -Encoding UTF8
+        $wifiName = $creds[0].Trim()
+        $wifiPass = $creds[1].Trim()
+        Write-Log "WiFi: Doc duoc thong tin mang: '$wifiName'"
     } catch {
-        Write-Log "WiFi: Khong doc duoc ten tu XML - $($_.Exception.Message)"
+        Write-Log "WiFi: Khong doc duoc wifi_credentials.txt - $($_.Exception.Message)"
         $wifiName = $null
     }
 
-    if ($wifiName) {
-        Write-Log "WiFi: Them profile..."
-        netsh wlan add profile filename="$wlanProfile" | Out-Null
+    if (-not [string]::IsNullOrWhiteSpace($wifiName)) {
+        # Tat bang hoi Network Location
+        New-Item -Path "HKLM:\System\CurrentControlSet\Control\Network\NewNetworkWindowOff" -Force -ErrorAction SilentlyContinue | Out-Null
+
+        $profilesToTry = @(
+            @{ Auth="WPA2PSK"; Enc="AES" },
+            @{ Auth="WPA3SAE"; Enc="AES" },
+            @{ Auth="WPAPSK"; Enc="TKIP" },
+            @{ Auth="WPA2PSK"; Enc="TKIP" }
+        )
 
         $wifiConnected = $false
-        for ($i = 1; $i -le 5; $i++) {
-            Write-Log "WiFi: Thu ket noi '$wifiName' (lan $i/5)..."
+        foreach ($prof in $profilesToTry) {
+            if ($wifiConnected) { break }
+            
+            $auth = $prof.Auth
+            $enc = $prof.Enc
+            
+            $tempProfile = "$env:TEMP\TempWlanProfile_$auth.xml"
+            $wlanXmlContent = @"
+<?xml version="1.0"?>
+<WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">
+    <name>$wifiName</name>
+    <SSIDConfig>
+        <SSID><name>$wifiName</name></SSID>
+    </SSIDConfig>
+    <connectionType>ESS</connectionType>
+    <connectionMode>auto</connectionMode>
+    <MSM>
+        <security>
+            <authEncryption>
+                <authentication>$auth</authentication>
+                <encryption>$enc</encryption>
+                <useOneX>false</useOneX>
+            </authEncryption>
+            <sharedKey>
+                <keyType>passPhrase</keyType>
+                <protected>false</protected>
+                <keyMaterial>$wifiPass</keyMaterial>
+            </sharedKey>
+        </security>
+    </MSM>
+</WLANProfile>
+"@
+            $wlanXmlContent | Out-File -FilePath $tempProfile -Encoding UTF8 -Force
+            netsh wlan add profile filename="$tempProfile" | Out-Null
+            Remove-Item $tempProfile -Force -ErrorAction SilentlyContinue
+
+            Write-Log "WiFi: Thu ket noi '$wifiName' voi chuan $auth/$enc..."
             netsh wlan connect name="$wifiName" | Out-Null
-            Start-Sleep -Seconds 10
+            Start-Sleep -Seconds 8
 
             if (Test-Internet) {
                 Write-Log "WiFi: Da ket noi va co Internet!"
                 $wifiConnected = $true
-                break
             } else {
-                Write-Log "WiFi: Chua co Internet, thu lai..."
-                if ($i -lt 5) { Start-Sleep -Seconds 5 }
+                Start-Sleep -Seconds 5
+                if (Test-Internet) {
+                    Write-Log "WiFi: Da ket noi va co Internet!"
+                    $wifiConnected = $true
+                } else {
+                    Write-Log "WiFi: That bai voi chuan $auth, thu tiep..."
+                }
             }
         }
 
         if (-not $wifiConnected) {
-            Write-Log "WiFi: KHONG KET NOI DUOC SAU 5 LAN THU"
+            Write-Log "WiFi: KHONG KET NOI DUOC TU DONG!"
         }
     }
 } else {
-    Write-Log "WiFi: Khong tim thay WlanProfile.xml - bo qua"
+    Write-Log "WiFi: Khong tim thay wifi_credentials.txt - bo qua"
 }
 
 # Kiem tra lai Internet (co the da co qua Ethernet)
