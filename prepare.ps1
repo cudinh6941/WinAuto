@@ -62,6 +62,36 @@ if (-not (Test-Admin)) {
 }
 Write-Ok "Dang chay voi quyen Administrator"
 
+# ==================== BUOC 0: KIEM TRA AN TOAN (PRE-CHECK) ====================
+Write-Host ""
+Write-Step 0 "Kiem tra an toan he thong..."
+
+$sysDrive = $env:SystemDrive.Substring(0,1)
+$cDrive = Get-Volume -DriveLetter $sysDrive -ErrorAction SilentlyContinue
+if ($cDrive) {
+    $freeSpaceGB = [math]::Round($cDrive.SizeRemaining / 1GB, 2)
+    if ($freeSpaceGB -lt 25) {
+        Write-Host ""
+        Write-Host "  [X] CANH BAO DO: O dia chua he dieu hanh hien tai ($sysDrive:) chi con $freeSpaceGB GB trong!" -ForegroundColor Red
+        Write-Host "      Vui long don dep de trong it nhat 25GB roi moi chay luong Auto." -ForegroundColor Red
+        Write-Host ""
+        Read-Host "  Nhan Enter de thoat..."
+        exit 1
+    } else {
+        Write-Ok "Dung luong trong o $sysDrive: ok ($freeSpaceGB GB)"
+    }
+}
+
+$physicalDisks = Get-Disk | Where-Object {$_.BusType -ne "USB" -and $_.BusType -ne "File Backed Virtual"}
+if ($physicalDisks.Count -gt 1) {
+    Write-Host ""
+    Write-Host "  [!] CANH BAO VANG: May dang co $($physicalDisks.Count) o cung vat ly." -ForegroundColor Yellow
+    Write-Host "      Script da gài Bùa Dinh Vi (Marker Failsafe) de bao ve tuyet doi o Data." -ForegroundColor Yellow
+    Write-Host ""
+} else {
+    Write-Ok "So luong o cung: 1 (An toan tuyet doi)"
+}
+
 # ==================== BUOC 1: CHON PHIEN BAN WINDOWS ====================
 Write-Host ""
 Write-Step 1 "Chon phien ban Windows can cai:"
@@ -166,10 +196,16 @@ Write-Ok "ISO: $IsoPath ($isoSize GB)"
 Write-Step 4 "Phat hien partition layout..."
 
 try {
-    $cPartition = Get-Partition -DriveLetter C -ErrorAction Stop
+    $sysDriveLetter = $env:SystemDrive.Substring(0,1)
+    $cPartition = Get-Partition -DriveLetter $sysDriveLetter -ErrorAction Stop
     $diskId = $cPartition.DiskNumber
     $partitionId = $cPartition.PartitionNumber
     
+    # NEM BUA DINH VI VAO GOC O HE DIEU HANH HIEN TAI (MARKER FAILSAFE)
+    $markerPath = "$($sysDriveLetter):\WINAUTO_MARKER.txt"
+    "WINAUTO_TARGET_MARKER_DO_NOT_DELETE" | Out-File -FilePath $markerPath -Encoding ASCII -Force
+    Write-Ok "Da dat Bua dinh vi tai: $markerPath"
+
     $disk = Get-Disk -Number $diskId
     $diskSize = [math]::Round($disk.Size / 1GB, 1)
     $diskModel = $disk.FriendlyName
@@ -183,7 +219,7 @@ try {
         $pLetter = if ($p.DriveLetter) { "$($p.DriveLetter)" + ":" } else { "  " }
         $pType = $p.Type
         
-        if ($p.DriveLetter -eq 'C') {
+        if ($p.DriveLetter -eq $sysDriveLetter) {
             Write-Host "      | Partition $($p.PartitionNumber) - $pLetter  $pSize GB  [$pType] -> SE FORMAT" -ForegroundColor Red
         } else {
             Write-Host "      | Partition $($p.PartitionNumber) - $pLetter  $pSize GB  [$pType] -> Giu nguyen" -ForegroundColor Green
@@ -191,7 +227,7 @@ try {
     }
     Write-Host "      ----------------------------------------" -ForegroundColor Cyan
     Write-Host ""
-    Write-Ok "C nam o Disk ${diskId}, Partition ${partitionId}"
+    Write-Ok "OS nam o Disk ${diskId}, Partition ${partitionId}"
     
 } catch {
     Write-Warn "Khong the phat hien partition C: - $($_.Exception.Message)"
@@ -318,6 +354,9 @@ Write-Host ""
 Start-Sleep -Seconds 3
 
 $setupExe = Join-Path $setupFolder "sources\setup.exe"
-Start-Process -FilePath $setupExe -ArgumentList "/unattend:`"$outputXml`"" -Wait
+Write-Host "      Bat dau downlevel phase (khong tu reboot)..." -ForegroundColor Gray
+Start-Process -FilePath $setupExe -ArgumentList "/unattend:`"$outputXml`" /noreboot" -Wait
 
-Write-Host "  Setup da ket thuc hoac may dang restart..." -ForegroundColor Cyan
+Write-Host "  Setup downlevel da xong. Dang ep khoi dong lai bao luc..." -ForegroundColor Red
+Start-Sleep -Seconds 2
+Start-Process -FilePath "shutdown.exe" -ArgumentList "/r", "/f", "/t", "0" -NoNewWindow
