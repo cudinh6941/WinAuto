@@ -21,7 +21,7 @@ function Write-Banner {
     Write-Host ""
     Write-Host "  =====================================================" -ForegroundColor Cyan
     Write-Host "  |        WinAuto - Cai lai Windows tu xa            |" -ForegroundColor Cyan
-    Write-Host "  |        An toan: Chi format C:, giu nguyen D:      |" -ForegroundColor Cyan
+    Write-Host "  |     Developed by Pham Kha Dinh - PTSC Quang Ngai  |" -ForegroundColor Cyan
     Write-Host "  =====================================================" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -72,13 +72,13 @@ if ($cDrive) {
     $freeSpaceGB = [math]::Round($cDrive.SizeRemaining / 1GB, 2)
     if ($freeSpaceGB -lt 25) {
         Write-Host ""
-        Write-Host "  [X] CANH BAO DO: O dia chua he dieu hanh hien tai ($sysDrive:) chi con $freeSpaceGB GB trong!" -ForegroundColor Red
+        Write-Host "  [X] CANH BAO DO: O dia chua he dieu hanh hien tai (${sysDrive}:) chi con $freeSpaceGB GB trong!" -ForegroundColor Red
         Write-Host "      Vui long don dep de trong it nhat 25GB roi moi chay luong Auto." -ForegroundColor Red
         Write-Host ""
         Read-Host "  Nhan Enter de thoat..."
         exit 1
     } else {
-        Write-Ok "Dung luong trong o $sysDrive: ok ($freeSpaceGB GB)"
+        Write-Ok "Dung luong trong o ${sysDrive}: ok ($freeSpaceGB GB)"
     }
 }
 
@@ -305,19 +305,77 @@ if (Test-Path $setupFolder) {
     Remove-Item $setupFolder -Recurse -Force
 }
 
-Write-Host "      Mount ISO..." -ForegroundColor Gray
-$mountResult = Mount-DiskImage -ImagePath $IsoPath -PassThru
-$isoVolume = $mountResult | Get-Volume
-$isoDrive = "$($isoVolume.DriveLetter):"
-Write-Ok "ISO mounted tai $isoDrive"
-
-Write-Host "      Dang copy ISO -> $setupFolder (cho 2-5 phut)..." -ForegroundColor Gray
 New-Item -ItemType Directory -Path $setupFolder -Force | Out-Null
-$robocopyResult = robocopy "$isoDrive\" "$setupFolder" /E /NFL /NDL /NJH /NJS /NC /NS /NP
-Write-Ok "Da copy xong"
 
-Dismount-DiskImage -ImagePath $IsoPath | Out-Null
-Write-Ok "Da unmount ISO"
+$mountSuccess = $false
+try {
+    Write-Host "      Thu mount ISO bang Windows..." -ForegroundColor Gray
+    $mountResult = Mount-DiskImage -ImagePath $IsoPath -PassThru -ErrorAction Stop
+    $isoVolume = $mountResult | Get-Volume
+    if ($isoVolume -and $isoVolume.DriveLetter) {
+        $isoDrive = "$($isoVolume.DriveLetter):"
+        Write-Ok "ISO mounted tai $isoDrive"
+
+        Write-Host "      Dang copy ISO -> $setupFolder (cho 2-5 phut)..." -ForegroundColor Gray
+        robocopy "$isoDrive\" "$setupFolder" /E /NFL /NDL /NJH /NJS /NC /NS /NP /R:1 /W:1 | Out-Null
+        Write-Ok "Da copy xong"
+
+        Dismount-DiskImage -ImagePath $IsoPath | Out-Null
+        Write-Ok "Da unmount ISO"
+        $mountSuccess = $true
+    } else {
+        throw "Mount thanh cong nhung khong lay duoc drive letter"
+    }
+} catch {
+    Write-Host ""
+    Write-Host "  [!] Mount ISO that bai: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "  [!] Dang kich hoat PHAO CUU SINH 7-Zip..." -ForegroundColor Yellow
+    Write-Host ""
+
+    # Kiem tra 7-Zip da co san chua
+    $7zExe = "C:\Program Files\7-Zip\7z.exe"
+    if (-not (Test-Path $7zExe)) {
+        Write-Host "      Dang tai 7-Zip tu trang chu (1.5 MB)..." -ForegroundColor Gray
+        $7zInstaller = Join-Path $env:TEMP "7z_installer.exe"
+        try {
+            Invoke-WebRequest -Uri "https://www.7-zip.org/a/7z2408-x64.exe" -OutFile $7zInstaller -ErrorAction Stop
+            Write-Ok "Da tai 7-Zip installer"
+
+            Write-Host "      Dang cai dat 7-Zip ngam..." -ForegroundColor Gray
+            Start-Process -FilePath $7zInstaller -ArgumentList "/S" -Wait
+            Write-Ok "Da cai dat 7-Zip"
+        } catch {
+            Write-Warn "Khong the tai 7-Zip! Kiem tra ket noi mang cua may khach."
+            Write-Warn "Hoac cai thu cong 7-Zip roi chay lai script."
+            Read-Host "Nhan Enter de thoat"
+            exit 1
+        }
+    } else {
+        Write-Ok "7-Zip da co san tren may"
+    }
+
+    if (-not (Test-Path $7zExe)) {
+        Write-Warn "Khong tim thay 7z.exe sau khi cai dat!"
+        Read-Host "Nhan Enter de thoat"
+        exit 1
+    }
+
+    Write-Host "      Dang giai nen ISO bang 7-Zip (cho 2-5 phut)..." -ForegroundColor Gray
+    $extractResult = Start-Process -FilePath $7zExe -ArgumentList "x", "`"$IsoPath`"", "-o`"$setupFolder`"", "-y" -Wait -PassThru -NoNewWindow
+    if ($extractResult.ExitCode -ne 0) {
+        Write-Warn "7-Zip giai nen that bai! File ISO co the bi loi."
+        Read-Host "Nhan Enter de thoat"
+        exit 1
+    }
+    Write-Ok "Da giai nen ISO bang 7-Zip thanh cong"
+    $mountSuccess = $true
+}
+
+if (-not $mountSuccess) {
+    Write-Warn "Khong the giai nen ISO bang bat ky phuong phap nao!"
+    Read-Host "Nhan Enter de thoat"
+    exit 1
+}
 
 # ==================== BUOC 8: TAO $OEM$ VA COPY SCRIPTS ====================
 Write-Step 8 "Tao $OEM$ va copy scripts..."
@@ -354,9 +412,15 @@ Write-Host ""
 Start-Sleep -Seconds 3
 
 $setupExe = Join-Path $setupFolder "sources\setup.exe"
-Write-Host "      Bat dau downlevel phase (khong tu reboot)..." -ForegroundColor Gray
-Start-Process -FilePath $setupExe -ArgumentList "/unattend:`"$outputXml`" /noreboot" -Wait
+if (-not (Test-Path $setupExe)) {
+    $setupExe = Join-Path $setupFolder "setup.exe"
+}
+if (-not (Test-Path $setupExe)) {
+    Write-Warn "LOI: Khong tim thay setup.exe trong file ISO vua giai nen!"
+    Read-Host "Nhan Enter de thoat"
+    exit 1
+}
+Write-Host "      Bat dau downlevel phase..." -ForegroundColor Gray
+Start-Process -FilePath $setupExe -ArgumentList "/unattend:`"$outputXml`"" -Wait
 
-Write-Host "  Setup downlevel da xong. Dang ep khoi dong lai bao luc..." -ForegroundColor Red
-Start-Sleep -Seconds 2
-Start-Process -FilePath "shutdown.exe" -ArgumentList "/r", "/f", "/t", "0" -NoNewWindow
+Write-Host "  Setup da ket thuc hoac may dang restart..." -ForegroundColor Cyan
