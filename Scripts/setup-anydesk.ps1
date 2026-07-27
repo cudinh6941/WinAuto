@@ -5,6 +5,7 @@ $password = "Cds@1124"
 # ===================================================
 
 # ==================== HAM GHI LOG ====================
+$env:SEE_MASK_NOZONECHECKS = "1"
 $logFile = "C:\WinAuto_setup.log"
 function Write-Log {
     param([string]$Message)
@@ -61,6 +62,7 @@ if (-not $wifiAdapters) {
     if (Test-Path $driverInstaller) {
         Write-Log "Khong thay driver WiFi, dang cai 3DP Net tu dong..."
         try {
+            Unblock-File -Path $driverInstaller -ErrorAction SilentlyContinue
             $proc = Start-Process -FilePath $driverInstaller -ArgumentList "-y", "-gm2", "-o`"C:\3DPNet`"" -PassThru
             Write-Log "3DP Net: Dang cho giai nen..."
             $proc | Wait-Process -Timeout 60 -ErrorAction SilentlyContinue
@@ -190,6 +192,7 @@ if (-not (Test-Path $installedPath)) {
     if (Test-Path $localInstaller) {
         Write-Log "AnyDesk: Dang cai dat tu installer offline..."
         try {
+            Unblock-File -Path $localInstaller -ErrorAction SilentlyContinue
             Start-Process -FilePath $localInstaller -ArgumentList "--install", '"C:\Program Files (x86)\AnyDesk"', "--silent", "--start-with-win" -Wait
             Write-Log "AnyDesk: Cai dat xong!"
             Start-Sleep -Seconds 5
