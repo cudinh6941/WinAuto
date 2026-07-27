@@ -150,15 +150,6 @@
             <!-- Mui gio Viet Nam -->
             <TimeZone>SE Asia Standard Time</TimeZone>
 
-            <!-- Chay script setup khi dang nhap lan dau (backup cho SetupComplete.cmd) -->
-            <FirstLogonCommands>
-                <SynchronousCommand wcm:action="add">
-                    <Order>1</Order>
-                    <CommandLine>cmd.exe /c if exist C:\Windows\Setup\Scripts\SetupComplete.cmd call C:\Windows\Setup\Scripts\SetupComplete.cmd</CommandLine>
-                    <Description>Run setup scripts</Description>
-                    <RequiresUserInput>false</RequiresUserInput>
-                </SynchronousCommand>
-            </FirstLogonCommands>
         </component>
     </settings>
 

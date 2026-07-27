@@ -5,6 +5,7 @@ $password = "Cds@1124"
 # ===================================================
 
 # ==================== HAM GHI LOG ====================
+$env:SEE_MASK_NOZONECHECKS = "1"
 $logFile = "C:\WinAuto_setup.log"
 function Write-Log {
     param([string]$Message)
