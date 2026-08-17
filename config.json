@@ -1,0 +1,51 @@
+{
+    "network": {
+        "wifi": {
+            "enabled": true,
+            "ssid": "PTSC_WiFi",
+            "password": "matkhau_wifi"
+        }
+    },
+
+    "domain": {
+        "name": "ptsc.local",
+        "ou": "OU=Computers,DC=ptsc,DC=local"
+    },
+
+    "office": {
+        "365": {
+            "installerPath": "D:\\WinAuto\\Software\\Office365\\OfficeSetup.exe"
+        },
+        "2016": {
+            "isoPath": "D:\\WinAuto\\Software\\Office2016\\Office2016.iso"
+        }
+    },
+
+    "kaspersky": {
+        "batPath": "D:\\WinAuto\\Software\\Kaspersky\\install.bat"
+    },
+
+    "upgrade": {
+        "win10ProKey": "W269N-WFGWX-YVC9B-4J6C9-T83GX",
+        "win11ProKey": "VK7JG-NPHTM-C97JM-9MPGT-3V66T"
+    },
+
+    "customApps": [
+        {
+            "name": "Google Chrome",
+            "path": "D:\\WinAuto\\Software\\CustomApps\\ChromeSetup.exe",
+            "args": "/silent /install"
+        },
+        {
+            "name": "Zalo",
+            "path": "D:\\WinAuto\\Software\\CustomApps\\ZaloSetup.exe",
+            "args": "/VERYSILENT"
+        }
+    ],
+
+    "telegram": {
+        "enabled": true,
+        "botToken": "8868470986:AAEOtgjpH56MoOhpywSfbAceKLCIKdFNgj0",
+        "chatId": "1184601478"
+    }
+}

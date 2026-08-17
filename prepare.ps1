@@ -1,11 +1,12 @@
 # ================================================================
-# prepare.ps1 - Script chuan bi cai lai Windows tu xa (AN TOAN)
-# Chay script nay tren may can cai lai. No se tu dong:
-#   1. Hoi ban cai Win 10 hay Win 11
+# prepare.ps1 - WinAuto v2 - Script chinh chuan bi cai lai Windows
+# Chay script nay tren may can cai lai. No se:
+#   1. Hoi thong tin cau hinh cho may nay
 #   2. Phat hien partition C: (DiskID, PartitionID)
 #   3. Giai nen ISO, tao $OEM$, copy scripts
 #   4. Sinh autounattend.xml dung cho may
-#   5. Chay setup.exe -> may tu cai lai
+#   5. Luu state.json + Tao Scheduled Task
+#   6. Chay setup.exe -> may tu cai lai
 # ================================================================
 
 param(
@@ -16,12 +17,18 @@ $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $setupFolder = "C:\WinSetup"
 
+# Load thu vien
+$libDir = Join-Path $scriptDir "Scripts\lib"
+if (Test-Path (Join-Path $libDir "common.ps1")) {
+    . (Join-Path $libDir "common.ps1")
+}
+
 # ==================== HAM TIEN ICH ====================
 function Write-Banner {
     Write-Host ""
     Write-Host "  =====================================================" -ForegroundColor Cyan
-    Write-Host "  |        WinAuto - Cai lai Windows tu xa            |" -ForegroundColor Cyan
-    Write-Host "  |     Developed by Pham Kha Dinh - PTSC Quang Ngai  |" -ForegroundColor Cyan
+    Write-Host "  |      WinAuto v2 - Batch Windows Deployment         |" -ForegroundColor Cyan
+    Write-Host "  |    Developed by Pham Kha Dinh - PTSC Quang Ngai    |" -ForegroundColor Cyan
     Write-Host "  =====================================================" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -44,7 +51,7 @@ function Write-Warn {
     Write-Host $Text
 }
 
-function Test-Admin {
+function Test-AdminLocal {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($identity)
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -53,7 +60,7 @@ function Test-Admin {
 # ==================== KIEM TRA QUYEN ADMIN ====================
 Write-Banner
 
-if (-not (Test-Admin)) {
+if (-not (Test-AdminLocal)) {
     Write-Warn "Script can chay voi quyen ADMINISTRATOR!"
     Write-Warn "Click chuot phai PowerShell -> Run as Administrator"
     Write-Host ""
@@ -86,61 +93,106 @@ $physicalDisks = Get-Disk | Where-Object {$_.BusType -ne "USB" -and $_.BusType -
 if ($physicalDisks.Count -gt 1) {
     Write-Host ""
     Write-Host "  [!] CANH BAO VANG: May dang co $($physicalDisks.Count) o cung vat ly." -ForegroundColor Yellow
-    Write-Host "      Script da gài Bùa Dinh Vi (Marker Failsafe) de bao ve tuyet doi o Data." -ForegroundColor Yellow
+    Write-Host "      Script da gai Bua Dinh Vi (Marker Failsafe) de bao ve tuyet doi o Data." -ForegroundColor Yellow
     Write-Host ""
 } else {
     Write-Ok "So luong o cung: 1 (An toan tuyet doi)"
 }
 
-# ==================== BUOC 1: CHON PHIEN BAN WINDOWS ====================
+# ==================== BUOC 1: NHAP THONG TIN MAY ====================
 Write-Host ""
-Write-Step 1 "Chon phien ban Windows can cai:"
-Write-Host "      [1] Windows 10 Home" -ForegroundColor White
-Write-Host "      [2] Windows 11 Home (co bypass TPM/SecureBoot)" -ForegroundColor White
+Write-Host "  =====================================================" -ForegroundColor Magenta
+Write-Host "  |           NHAP THONG TIN CHO MAY NAY              |" -ForegroundColor Magenta
+Write-Host "  =====================================================" -ForegroundColor Magenta
 Write-Host ""
 
+# 1. Computer name
 do {
-    $winChoice = Read-Host "  Nhap 1 hoac 2"
-} while ($winChoice -ne "1" -and $winChoice -ne "2")
+    $computerName = Read-Host "  [1] Computer name (VD: PKDINH)"
+    $computerName = $computerName.Trim().ToUpper()
+} while ([string]::IsNullOrEmpty($computerName))
+Write-Ok "Computer name: $computerName"
 
-if ($winChoice -eq "1") {
-    $winVersion = "Windows 10 Home"
+# 2. Domain username
+do {
+    $domainUsername = Read-Host "  [2] Domain username (VD: pkdinh)"
+    $domainUsername = $domainUsername.Trim()
+} while ([string]::IsNullOrEmpty($domainUsername))
+Write-Ok "Domain username: $domainUsername"
+
+# 3. Domain user password
+do {
+    $domainUserPassword = Read-Host "  [3] Password cho $domainUsername"
+} while ([string]::IsNullOrEmpty($domainUserPassword))
+Write-Ok "Password: ********"
+
+# 4. Windows version
+Write-Host "  [4] Chon phien ban Windows:" -ForegroundColor White
+Write-Host "      [10] Windows 10" -ForegroundColor White
+Write-Host "      [11] Windows 11 (co bypass TPM/SecureBoot)" -ForegroundColor White
+do {
+    $winChoice = Read-Host "      Nhap 10 hoac 11"
+} while ($winChoice -ne "10" -and $winChoice -ne "11")
+
+if ($winChoice -eq "10") {
+    $winVersion = "10"
     $templateFile = Join-Path $scriptDir "autounattend_win10.xml"
 } else {
-    $winVersion = "Windows 11 Home"
+    $winVersion = "11"
     $templateFile = Join-Path $scriptDir "autounattend_win11.xml"
 }
-Write-Ok "Da chon: $winVersion"
+Write-Ok "Windows: $winVersion"
+
+# 5. Kaspersky
+do {
+    $kasChoice = Read-Host "  [5] Cai Kaspersky? (Y/N)"
+    $kasChoice = $kasChoice.Trim().ToUpper()
+} while ($kasChoice -ne "Y" -and $kasChoice -ne "N")
+$installKaspersky = ($kasChoice -eq "Y")
+Write-Ok "Kaspersky: $(if ($installKaspersky) {'Co'} else {'Khong'})"
+
+# 6. Office
+Write-Host "  [6] Chon phien ban Office:" -ForegroundColor White
+Write-Host "      [365]  Office 365" -ForegroundColor White
+Write-Host "      [2016] Office 2016" -ForegroundColor White
+do {
+    $officeChoice = Read-Host "      Nhap 365 hoac 2016"
+} while ($officeChoice -ne "365" -and $officeChoice -ne "2016")
+$officeType = $officeChoice
+Write-Ok "Office: $officeType"
+
+# 7. Domain join account
+do {
+    $domainJoinAccount = Read-Host "  [7] Tai khoan join domain (VD: admin_join)"
+    $domainJoinAccount = $domainJoinAccount.Trim()
+} while ([string]::IsNullOrEmpty($domainJoinAccount))
+Write-Ok "Join account: $domainJoinAccount"
+
+# 8. Domain join password
+do {
+    $domainJoinPassword = Read-Host "  [8] Password join domain"
+} while ([string]::IsNullOrEmpty($domainJoinPassword))
+Write-Ok "Join password: ********"
+
+Write-Host ""
 
 # ==================== BUOC 2: CAU HINH WIFI ====================
-Write-Host ""
 Write-Step 2 "Cau hinh ket noi mang sau khi cai xong:"
-Write-Host "      [1] Dung WiFi - nhap ten va mat khau WiFi" -ForegroundColor White
-Write-Host "      [2] Dung day LAN - bo qua WiFi" -ForegroundColor White
-Write-Host ""
+Write-Host "      Doc tu config.json..." -ForegroundColor Gray
 
-do {
-    $netChoice = Read-Host "  Nhap 1 hoac 2"
-} while ($netChoice -ne "1" -and $netChoice -ne "2")
-
-$scriptsDir = Join-Path $scriptDir "Scripts"
-
-if ($netChoice -eq "1") {
-    $wifiName = Read-Host "  Nhap ten WiFi (SSID)"
-    $wifiPass = Read-Host "  Nhap mat khau WiFi"
-
-    if ([string]::IsNullOrEmpty($wifiName) -or [string]::IsNullOrEmpty($wifiPass)) {
-        Write-Warn "Ten WiFi va mat khau khong duoc de trong!"
-        Read-Host "Nhan Enter de thoat"
-        exit 1
+# Doc config.json de kiem tra WiFi
+$configPath = Join-Path $scriptDir "config.json"
+if (Test-Path $configPath) {
+    $config = Get-Content $configPath -Raw | ConvertFrom-Json
+    if ($config.network.wifi.enabled) {
+        Write-Ok "WiFi: $($config.network.wifi.ssid) (tu config.json)"
+    } else {
+        Write-Ok "WiFi: Tat - dung LAN"
     }
-
-    # Luu thong tin WiFi vao file text de setup-anydesk.ps1 tu dong thu nhieu chuan bao mat khac nhau
-    $wifiCredPath = Join-Path $scriptsDir "wifi_credentials.txt"
-    "$wifiName`n$wifiPass" | Out-File -FilePath $wifiCredPath -Encoding UTF8 -Force
-    Write-Ok "Da tao wifi_credentials.txt cho mạng: '$wifiName'"
 } else {
-    Write-Ok "Bo qua WiFi - se dung day LAN"
+    Write-Warn "Khong tim thay config.json!"
+    Read-Host "Nhan Enter de thoat"
+    exit 1
 }
 
 # ==================== BUOC 3: TIM FILE ISO ====================
@@ -238,13 +290,15 @@ try {
 # ==================== BUOC 5: KIEM TRA SCRIPTS ====================
 Write-Step 5 "Kiem tra cac file can thiet..."
 
+$scriptsDir = Join-Path $scriptDir "Scripts"
 $requiredFiles = @(
-    @{ Name = "SetupComplete.cmd";  Path = Join-Path $scriptsDir "SetupComplete.cmd" },
-    @{ Name = "setup-anydesk.ps1";  Path = Join-Path $scriptsDir "setup-anydesk.ps1" },
-    @{ Name = "3dpnet.exe";         Path = Join-Path $scriptsDir "3dpnet.exe" }
+    @{ Name = "SetupComplete.cmd";   Path = Join-Path $scriptsDir "SetupComplete.cmd" },
+    @{ Name = "post-install.ps1";    Path = Join-Path $scriptsDir "post-install.ps1" },
+    @{ Name = "lib\common.ps1";      Path = Join-Path $scriptsDir "lib\common.ps1" },
+    @{ Name = "lib\network.ps1";     Path = Join-Path $scriptsDir "lib\network.ps1" }
 )
 $optionalFiles = @(
-    @{ Name = "AnyDesk.exe (installer)"; Path = Join-Path $scriptsDir "AnyDesk.exe" }
+    @{ Name = "3dpnet.exe";          Path = Join-Path $scriptsDir "3dpnet.exe" }
 )
 
 $allGood = $true
@@ -264,6 +318,17 @@ foreach ($f in $optionalFiles) {
     }
 }
 
+# Kiem tra phase scripts
+$phaseFiles = 1..9 | ForEach-Object { "phases\phase$_-*.ps1" }
+$phasesDir = Join-Path $scriptsDir "phases"
+if (Test-Path $phasesDir) {
+    $phaseCount = (Get-ChildItem -Path $phasesDir -Filter "phase*.ps1" -File).Count
+    Write-Ok "Phase scripts: $phaseCount files"
+} else {
+    Write-Warn "THIEU: Thu muc phases/"
+    $allGood = $false
+}
+
 if (-not (Test-Path $templateFile)) {
     Write-Warn "THIEU template: $templateFile"
     $allGood = $false
@@ -280,14 +345,18 @@ Write-Host ""
 Write-Host "  =====================================================" -ForegroundColor Yellow
 Write-Host "  |                 ! XAC NHAN LAN CUOI               |" -ForegroundColor Yellow
 Write-Host "  =====================================================" -ForegroundColor Yellow
-Write-Host "  | Phien ban : $winVersion" -ForegroundColor Yellow
-Write-Host "  | ISO       : $IsoPath" -ForegroundColor Yellow
-Write-Host "  | Disk      : ${diskId} ($diskModel)" -ForegroundColor Yellow
-Write-Host "  | Partition : ${partitionId} (C)" -ForegroundColor Yellow
+Write-Host "  | Computer   : $computerName" -ForegroundColor Yellow
+Write-Host "  | Domain User: $domainUsername" -ForegroundColor Yellow
+Write-Host "  | Windows    : $winVersion" -ForegroundColor Yellow
+Write-Host "  | Office     : $officeType" -ForegroundColor Yellow
+Write-Host "  | Kaspersky  : $(if ($installKaspersky) {'Co'} else {'Khong'})" -ForegroundColor Yellow
+Write-Host "  | ISO        : $IsoPath" -ForegroundColor Yellow
+Write-Host "  | Disk       : ${diskId} ($diskModel)" -ForegroundColor Yellow
+Write-Host "  | Partition  : ${partitionId} (${sysDriveLetter}:)" -ForegroundColor Yellow
 Write-Host "  |                                                   |" -ForegroundColor Yellow
-Write-Host "  | -> Partition C: SE BI FORMAT                      |" -ForegroundColor Red
+Write-Host "  | -> Partition ${sysDriveLetter}: SE BI FORMAT                      |" -ForegroundColor Red
 Write-Host "  | -> Cac partition khac KHONG bi anh huong          |" -ForegroundColor Green
-Write-Host "  | -> May se TU RESTART sau khi xac nhan             |" -ForegroundColor Yellow
+Write-Host "  | -> May se TU RESTART va TU DONG CAI DAT          |" -ForegroundColor Yellow
 Write-Host "  =====================================================" -ForegroundColor Yellow
 Write-Host ""
 
@@ -297,8 +366,31 @@ if ($confirm -ne "GO") {
     exit 0
 }
 
-# ==================== BUOC 7: GIAI NEN ISO ====================
-Write-Step 7 "Giai nen ISO..."
+# ==================== BUOC 7: LUU STATE ====================
+Write-Step 7 "Luu state.json..."
+
+# Load DPAPI
+Add-Type -AssemblyName System.Security -ErrorAction SilentlyContinue
+
+$stateData = New-WinAutoState `
+    -ComputerName $computerName `
+    -DomainUsername $domainUsername `
+    -DomainUserPassword $domainUserPassword `
+    -WinVersion $winVersion `
+    -InstallKaspersky $installKaspersky `
+    -OfficeType $officeType `
+    -DomainJoinAccount $domainJoinAccount `
+    -DomainJoinPassword $domainJoinPassword
+
+Write-Ok "State da luu tai $($script:StateFile)"
+
+# ==================== BUOC 8: TAO SCHEDULED TASK ====================
+Write-Step 8 "Tao Scheduled Task cho auto-resume..."
+Register-WinAutoTask
+Write-Ok "Scheduled Task WinAuto_Resume da tao"
+
+# ==================== BUOC 9: GIAI NEN ISO ====================
+Write-Step 9 "Giai nen ISO..."
 
 if (Test-Path $setupFolder) {
     Write-Host "      Xoa thu muc cu $setupFolder..." -ForegroundColor Gray
@@ -377,21 +469,36 @@ if (-not $mountSuccess) {
     exit 1
 }
 
-# ==================== BUOC 8: TAO $OEM$ VA COPY SCRIPTS ====================
-Write-Step 8 "Tao $OEM$ va copy scripts..."
+# ==================== BUOC 10: TAO $OEM$ VA COPY SCRIPTS ====================
+Write-Step 10 "Tao `$OEM`$ va copy scripts..."
 
 $oemScriptsPath = Join-Path $setupFolder "sources\`$OEM`$\`$`$\Setup\Scripts"
 New-Item -ItemType Directory -Path $oemScriptsPath -Force | Out-Null
 
+# Copy tat ca files trong Scripts/ (bao gom subdirectories)
 $scriptFiles = Get-ChildItem -Path $scriptsDir -File
 foreach ($f in $scriptFiles) {
     Copy-Item $f.FullName $oemScriptsPath -Force
     Write-Host "      -> $($f.Name)" -ForegroundColor Gray
 }
-Write-Ok "Da copy $($scriptFiles.Count) files"
 
-# ==================== BUOC 9: SINH XML ====================
-Write-Step 9 "Sinh autounattend.xml..."
+# Copy thu muc lib/ va phases/
+$subDirs = @("lib", "phases")
+foreach ($subDir in $subDirs) {
+    $srcDir = Join-Path $scriptsDir $subDir
+    $dstDir = Join-Path $oemScriptsPath $subDir
+    if (Test-Path $srcDir) {
+        New-Item -ItemType Directory -Path $dstDir -Force | Out-Null
+        Copy-Item "$srcDir\*" $dstDir -Recurse -Force
+        $count = (Get-ChildItem -Path $dstDir -File -Recurse).Count
+        Write-Host "      -> $subDir/ ($count files)" -ForegroundColor Gray
+    }
+}
+
+Write-Ok "Da copy scripts va subdirectories"
+
+# ==================== BUOC 11: SINH XML ====================
+Write-Step 11 "Sinh autounattend.xml..."
 
 $xmlContent = Get-Content $templateFile -Raw -Encoding UTF8
 $xmlContent = $xmlContent -replace '{{DISK_ID}}', $diskId
@@ -401,12 +508,22 @@ $outputXml = Join-Path $setupFolder "autounattend.xml"
 $xmlContent | Out-File -FilePath $outputXml -Encoding UTF8 -Force
 Write-Ok "Da tao autounattend.xml"
 
-# ==================== BUOC 10: CHAY SETUP ====================
-Write-Step 10 "Khoi chay Windows Setup..."
+# ==================== BUOC 12: CHAY SETUP ====================
+Write-Step 12 "Khoi chay Windows Setup..."
 Write-Host ""
 Write-Warn "MAY SE TU RESTART TRONG GIAY LAT!"
-Write-Warn "Ban se MAT KET NOI REMOTE - do la binh thuong."
-Write-Warn "Cho 15-30 phut -> nhan Telegram."
+Write-Warn "Sau khi cai xong, may se TU DONG thuc hien 9 buoc:"
+Write-Host "      Phase 1: Cai driver mang" -ForegroundColor Gray
+Write-Host "      Phase 2: Upgrade len Windows Pro" -ForegroundColor Gray
+Write-Host "      Phase 3: Cai Office $officeType" -ForegroundColor Gray
+Write-Host "      Phase 4: BitLocker OFF + Kaspersky$(if (-not $installKaspersky) {' (BO QUA)'})" -ForegroundColor Gray
+Write-Host "      Phase 5: Doi ten may -> $computerName" -ForegroundColor Gray
+Write-Host "      Phase 6: Join domain" -ForegroundColor Gray
+Write-Host "      Phase 7: Add domain user $domainUsername" -ForegroundColor Gray
+Write-Host "      Phase 8: Cai Custom Apps" -ForegroundColor Gray
+Write-Host "      Phase 9: Switch user + Hoan tat" -ForegroundColor Gray
+Write-Host ""
+Write-Warn "Khong can lam gi them. Co the bo di sang may khac."
 Write-Host ""
 
 Start-Sleep -Seconds 3
