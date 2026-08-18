@@ -1,4 +1,4 @@
-# ================================================================
+﻿# ================================================================
 # post-install.ps1 - Phase Executor chinh cua WinAuto v2
 # Chay tu dong sau moi lan restart, doc state.json de biet
 # dang o phase nao va tiep tuc chay phase tiep theo.
@@ -20,6 +20,7 @@ $state = Get-WinAutoState
 
 if (-not $state) {
     # Khong co state file = khong co gi de lam
+    "[$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))] [ERROR] post-install.ps1: Khong tim thay file state.json! Script dung lai." | Out-File "C:\WinAuto_setup.log" -Append
     exit 0
 }
 
@@ -110,3 +111,5 @@ function Invoke-Phase {
 
 # Bat dau tu phase hien tai trong state
 Invoke-Phase -PhaseNumber $state.currentPhase
+
+

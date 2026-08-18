@@ -1,0 +1,80 @@
+﻿
+[2026-08-18 16:42:08] [PHASE] ==========================================
+[2026-08-18 16:42:08] [PHASE] WinAuto v2 - Post-Install Phase Executor
+[2026-08-18 16:42:08] [PHASE] Computer: TEST-PC
+[2026-08-18 16:42:08] [PHASE] Current Phase: 1
+[2026-08-18 16:42:08] [PHASE] ==========================================
+[2026-08-18 16:42:08] [INFO] Cho he thong on dinh (20s)...
+[2026-08-18 16:42:09] [INFO] Chay phase 1 tu: D:\WinAuto\Scripts\phases\phase1-drivers.ps1
+[2026-08-18 16:42:10] [PHASE] ===== Phase 1 HOAN TAT =====
+[2026-08-18 16:42:10] [INFO] State saved: Phase 1
+[2026-08-18 16:42:10] [INFO] State saved: Phase 2
+[2026-08-18 16:42:10] [WARN] Pending reboot detected: PendingFileRename
+[2026-08-18 16:42:10] [WARN] He thong can RESTART. Se tu dong tiep tuc Phase 2 sau khi restart.
+[2026-08-18 16:43:13] [INFO] Chay phase 2 tu: D:\WinAuto\Scripts\phases\phase2-upgrade-pro.ps1
+[2026-08-18 16:43:14] [PHASE] ===== Phase 2 HOAN TAT =====
+[2026-08-18 16:43:14] [INFO] State saved: Phase 2
+[2026-08-18 16:43:14] [INFO] State saved: Phase 3
+[2026-08-18 16:43:15] [WARN] Pending reboot detected: PendingFileRename
+[2026-08-18 16:43:15] [WARN] He thong can RESTART. Se tu dong tiep tuc Phase 3 sau khi restart.
+[2026-08-18 16:44:09] [PHASE] ==========================================
+[2026-08-18 16:44:09] [PHASE] WinAuto v2 - Post-Install Phase Executor
+[2026-08-18 16:44:09] [PHASE] Computer: TEST-PC
+[2026-08-18 16:44:09] [PHASE] Current Phase: 1
+[2026-08-18 16:44:09] [PHASE] ==========================================
+[2026-08-18 16:44:09] [INFO] Cho he thong on dinh (20s)...
+[2026-08-18 16:44:10] [INFO] Chay phase 1 tu: D:\WinAuto\Scripts\phases\phase1-drivers.ps1
+[2026-08-18 16:44:11] [PHASE] ===== Phase 1 HOAN TAT =====
+[2026-08-18 16:44:11] [INFO] State saved: Phase 1
+[2026-08-18 16:44:11] [INFO] State saved: Phase 2
+[2026-08-18 16:44:12] [WARN] Pending reboot detected: PendingFileRename
+[2026-08-18 16:44:12] [WARN] He thong can RESTART. Se tu dong tiep tuc Phase 2 sau khi restart.
+[2026-08-18 16:44:16] [INFO] Chay phase 2 tu: D:\WinAuto\Scripts\phases\phase2-upgrade-pro.ps1
+[2026-08-18 16:44:17] [PHASE] ===== Phase 2 HOAN TAT =====
+[2026-08-18 16:44:17] [INFO] State saved: Phase 2
+[2026-08-18 16:44:17] [INFO] State saved: Phase 3
+[2026-08-18 16:44:17] [WARN] Pending reboot detected: PendingFileRename
+[2026-08-18 16:44:17] [WARN] He thong can RESTART. Se tu dong tiep tuc Phase 3 sau khi restart.
+[2026-08-18 16:44:21] [INFO] Chay phase 3 tu: D:\WinAuto\Scripts\phases\phase3-office.ps1
+[2026-08-18 16:44:22] [PHASE] ===== Phase 3 HOAN TAT =====
+[2026-08-18 16:44:22] [INFO] State saved: Phase 3
+[2026-08-18 16:44:22] [INFO] State saved: Phase 4
+[2026-08-18 16:44:22] [WARN] Pending reboot detected: PendingFileRename
+[2026-08-18 16:44:22] [WARN] He thong can RESTART. Se tu dong tiep tuc Phase 4 sau khi restart.
+[2026-08-18 16:44:26] [INFO] Chay phase 4 tu: D:\WinAuto\Scripts\phases\phase4-kaspersky.ps1
+[2026-08-18 16:44:28] [PHASE] ===== Phase 4 HOAN TAT =====
+[2026-08-18 16:44:28] [INFO] State saved: Phase 4
+[2026-08-18 16:44:28] [INFO] State saved: Phase 5
+[2026-08-18 16:44:28] [WARN] Pending reboot detected: PendingFileRename
+[2026-08-18 16:44:28] [WARN] He thong can RESTART. Se tu dong tiep tuc Phase 5 sau khi restart.
+[2026-08-18 16:44:32] [INFO] Chay phase 5 tu: D:\WinAuto\Scripts\phases\phase5-rename.ps1
+[2026-08-18 16:44:33] [PHASE] ===== Phase 5 HOAN TAT =====
+[2026-08-18 16:44:33] [INFO] State saved: Phase 5
+[2026-08-18 16:44:33] [INFO] State saved: Phase 6
+[2026-08-18 16:44:33] [WARN] Pending reboot detected: PendingFileRename
+[2026-08-18 16:44:33] [WARN] He thong can RESTART. Se tu dong tiep tuc Phase 6 sau khi restart.
+[2026-08-18 16:44:37] [INFO] Chay phase 6 tu: D:\WinAuto\Scripts\phases\phase6-domain-join.ps1
+[2026-08-18 16:44:38] [PHASE] ===== Phase 6 HOAN TAT =====
+[2026-08-18 16:44:38] [INFO] State saved: Phase 6
+[2026-08-18 16:44:38] [INFO] State saved: Phase 7
+[2026-08-18 16:44:39] [WARN] Pending reboot detected: PendingFileRename
+[2026-08-18 16:44:39] [WARN] He thong can RESTART. Se tu dong tiep tuc Phase 7 sau khi restart.
+[2026-08-18 16:44:43] [INFO] Chay phase 7 tu: D:\WinAuto\Scripts\phases\phase7-domain-user.ps1
+[2026-08-18 16:44:44] [PHASE] ===== Phase 7 HOAN TAT =====
+[2026-08-18 16:44:44] [INFO] State saved: Phase 7
+[2026-08-18 16:44:44] [INFO] State saved: Phase 8
+[2026-08-18 16:44:44] [WARN] Pending reboot detected: PendingFileRename
+[2026-08-18 16:44:44] [WARN] He thong can RESTART. Se tu dong tiep tuc Phase 8 sau khi restart.
+[2026-08-18 16:44:48] [INFO] Chay phase 8 tu: D:\WinAuto\Scripts\phases\phase8-custom-apps.ps1
+[2026-08-18 16:44:49] [PHASE] ===== Phase 8 HOAN TAT =====
+[2026-08-18 16:44:49] [INFO] State saved: Phase 8
+[2026-08-18 16:44:49] [INFO] State saved: Phase 9
+[2026-08-18 16:44:50] [WARN] Pending reboot detected: PendingFileRename
+[2026-08-18 16:44:50] [WARN] He thong can RESTART. Se tu dong tiep tuc Phase 9 sau khi restart.
+[2026-08-18 16:44:54] [INFO] Chay phase 9 tu: D:\WinAuto\Scripts\phases\phase9-finalize.ps1
+[2026-08-18 16:44:55] [PHASE] ===== Phase 9 HOAN TAT =====
+[2026-08-18 16:44:55] [INFO] State saved: Phase 9
+[2026-08-18 16:44:55] [INFO] State saved: Phase 10
+[2026-08-18 16:44:55] [WARN] Pending reboot detected: PendingFileRename
+[2026-08-18 16:44:55] [WARN] He thong can RESTART. Se tu dong tiep tuc Phase 10 sau khi restart.
+[2026-08-18 16:44:59] [PHASE] Tat ca phases da hoan tat!

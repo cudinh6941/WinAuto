@@ -1,4 +1,4 @@
-# ================================================================
+﻿# ================================================================
 # common.ps1 - Thu vien ham dung chung cho WinAuto v2
 # Bao gom: Logging, State Management, Reboot Detection, Encryption
 # ================================================================
@@ -253,7 +253,7 @@ function Complete-Phase {
     if (Test-PendingReboot) {
         Write-Log "He thong can RESTART. Se tu dong tiep tuc Phase $($CurrentPhase + 1) sau khi restart." -Level WARN
         Start-Sleep -Seconds 3
-        Restart-Computer -Force
+        Write-Host '   [MOCK] Da chan lenh Restart-Computer' -ForegroundColor Magenta
         # Script dung tai day
         Start-Sleep -Seconds 60
         exit 0
@@ -368,3 +368,4 @@ function Send-TelegramMessage {
 
 # Load DPAPI assembly
 Add-Type -AssemblyName System.Security -ErrorAction SilentlyContinue
+
