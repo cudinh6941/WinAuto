@@ -119,13 +119,13 @@
             <!-- Tao tai khoan local "User" (QUAN TRONG cho Win11!) -->
             <UserAccounts>
                 <AdministratorPassword>
-                    <Value></Value>
+                    <Value>Cds@1124</Value>
                     <PlainText>true</PlainText>
                 </AdministratorPassword>
                 <LocalAccounts>
                     <LocalAccount wcm:action="add">
                         <Password>
-                            <Value></Value>
+                            <Value>Cds@1124</Value>
                             <PlainText>true</PlainText>
                         </Password>
                         <Description>Local User</Description>
@@ -139,7 +139,7 @@
             <!-- Tu dong dang nhap bang tai khoan User -->
             <AutoLogon>
                 <Password>
-                    <Value></Value>
+                    <Value>Cds@1124</Value>
                     <PlainText>true</PlainText>
                 </Password>
                 <Enabled>true</Enabled>

@@ -139,7 +139,7 @@
             <!-- ========== KÍCH HOẠT TÀI KHOẢN ADMINISTRATOR ========== -->
             <UserAccounts>
                 <AdministratorPassword>
-                    <Value></Value>
+                    <Value>Cds@1124</Value>
                     <PlainText>true</PlainText>
                 </AdministratorPassword>
             </UserAccounts>

@@ -1,4 +1,4 @@
-﻿# ================================================================
+# ================================================================
 # common.ps1 - Thu vien ham dung chung cho WinAuto v2
 # Bao gom: Logging, State Management, Reboot Detection, Encryption
 # ================================================================
@@ -135,7 +135,13 @@ function Add-PhaseLog {
     
     # Convert to array if needed, add entry
     $logs = @($State.phaseLog) + $logEntry
-    $State.phaseLog = $logs
+    
+    # Handle missing property if state.json was created manually
+    if ($null -eq $State.psobject.Properties['phaseLog']) {
+        $State | Add-Member -MemberType NoteProperty -Name "phaseLog" -Value $logs
+    } else {
+        $State.phaseLog = $logs
+    }
     
     Set-WinAutoState -State $State
 }
@@ -250,13 +256,12 @@ function Complete-Phase {
     $State.currentPhase = $CurrentPhase + 1
     Set-WinAutoState -State $State
     
-    if (Test-PendingReboot) {
+       if (Test-PendingReboot) {
         Write-Log "He thong can RESTART. Se tu dong tiep tuc Phase $($CurrentPhase + 1) sau khi restart." -Level WARN
         Start-Sleep -Seconds 3
-        Write-Host '   [MOCK] Da chan lenh Restart-Computer' -ForegroundColor Magenta
-        # Script dung tai day
-        Start-Sleep -Seconds 60
-        exit 0
+        
+        # RESTART 
+        Restart-Computer -Force
     } else {
         Write-Log "Khong can restart. Chay tiep Phase $($CurrentPhase + 1)..." -Level INFO
     }
