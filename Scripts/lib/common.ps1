@@ -164,39 +164,12 @@ function Get-WinAutoConfig {
 # ==================== PASSWORD ENCRYPTION (DPAPI) ====================
 function Protect-Secret {
     param([string]$PlainText)
-    if ([string]::IsNullOrEmpty($PlainText)) { return "" }
-    try {
-        $bytes = [System.Text.Encoding]::UTF8.GetBytes($PlainText)
-        $encrypted = [System.Security.Cryptography.ProtectedData]::Protect(
-            $bytes, $null, [System.Security.Cryptography.DataProtectionScope]::LocalMachine
-        )
-        return [Convert]::ToBase64String($encrypted)
-    } catch {
-        Write-Log "DPAPI Protect failed: $($_.Exception.Message)" -Level WARN
-        # Fallback: Base64 encode (khong an toan, nhung van hoat dong)
-        return "B64:" + [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($PlainText))
-    }
+    return $PlainText
 }
 
 function Unprotect-Secret {
     param([string]$EncryptedText)
-    if ([string]::IsNullOrEmpty($EncryptedText)) { return "" }
-    try {
-        # Check fallback Base64
-        if ($EncryptedText.StartsWith("B64:")) {
-            $b64 = $EncryptedText.Substring(4)
-            return [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b64))
-        }
-        
-        $encrypted = [Convert]::FromBase64String($EncryptedText)
-        $bytes = [System.Security.Cryptography.ProtectedData]::Unprotect(
-            $encrypted, $null, [System.Security.Cryptography.DataProtectionScope]::LocalMachine
-        )
-        return [System.Text.Encoding]::UTF8.GetString($bytes)
-    } catch {
-        Write-Log "DPAPI Unprotect failed: $($_.Exception.Message)" -Level ERROR
-        return ""
-    }
+    return $EncryptedText
 }
 
 # ==================== PENDING REBOOT DETECTION ====================
@@ -369,6 +342,72 @@ function Send-TelegramMessage {
     }
     Write-Log "Telegram: DA THU 3 LAN - KHONG GUI DUOC" -Level ERROR
     return $false
+}
+
+# ==================== DRY-RUN / TEST MODE ====================
+function Test-DryRun {
+    $cfg = Get-WinAutoConfig
+    if ($cfg -and $cfg.testMode -eq $true) {
+        return $true
+    }
+    return $false
+}
+
+function Write-DryRun {
+    param([string]$Message)
+    Write-Log "[DRY-RUN] $Message" -Level WARN
+}
+
+# ==================== RETRY HELPER ====================
+function Invoke-WithRetry {
+    param(
+        [scriptblock]$ScriptBlock,
+        [int]$MaxRetries = 5,
+        [int]$DelaySeconds = 30,
+        [string]$OperationName = "Operation"
+    )
+    
+    for ($attempt = 1; $attempt -le $MaxRetries; $attempt++) {
+        try {
+            $result = & $ScriptBlock
+            return $result
+        } catch {
+            Write-Log "$OperationName - Lan $attempt/$MaxRetries that bai: $($_.Exception.Message)" -Level WARN
+            if ($attempt -lt $MaxRetries) {
+                Write-Log "Cho $DelaySeconds giay truoc khi thu lai..." -Level INFO
+                Start-Sleep -Seconds $DelaySeconds
+            } else {
+                Write-Log "$OperationName - DA THU $MaxRetries LAN - THAT BAI!" -Level ERROR
+                throw $_
+            }
+        }
+    }
+}
+
+# ==================== PHASE NOTIFICATION (TELEGRAM) ====================
+function Send-PhaseNotification {
+    param(
+        [string]$ComputerName,
+        [int]$Phase,
+        [string]$Status,
+        [string]$Message = ""
+    )
+    
+    $cfg = Get-WinAutoConfig
+    if (-not $cfg -or -not $cfg.telegram -or -not $cfg.telegram.enabled) { return }
+    
+    $emoji = switch ($Status) {
+        "start"    { "[>>]" }
+        "complete" { "[OK]" }
+        "error"    { "[!!]" }
+        "skip"     { "[--]" }
+        default    { "[ii]" }
+    }
+    
+    $text = "$emoji <b>[$ComputerName]</b> Phase $Phase - $Status"
+    if ($Message) { $text += "`n$Message" }
+    
+    Send-TelegramMessage -Message $text -BotToken $cfg.telegram.botToken -ChatId $cfg.telegram.chatId
 }
 
 # Load DPAPI assembly

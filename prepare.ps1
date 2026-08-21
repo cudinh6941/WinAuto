@@ -513,15 +513,15 @@ Write-Step 12 "Khoi chay Windows Setup..."
 Write-Host ""
 Write-Warn "MAY SE TU RESTART TRONG GIAY LAT!"
 Write-Warn "Sau khi cai xong, may se TU DONG thuc hien 9 buoc:"
-Write-Host "      Phase 1: Cai driver mang" -ForegroundColor Gray
+Write-Host "      Phase 1: Cai driver mang + Ket noi" -ForegroundColor Gray
 Write-Host "      Phase 2: Upgrade len Windows Pro" -ForegroundColor Gray
-Write-Host "      Phase 3: Cai Office $officeType" -ForegroundColor Gray
-Write-Host "      Phase 4: BitLocker OFF + Kaspersky$(if (-not $installKaspersky) {' (BO QUA)'})" -ForegroundColor Gray
-Write-Host "      Phase 5: Doi ten may -> $computerName" -ForegroundColor Gray
-Write-Host "      Phase 6: Join domain" -ForegroundColor Gray
-Write-Host "      Phase 7: Add domain user $domainUsername" -ForegroundColor Gray
-Write-Host "      Phase 8: Cai Custom Apps" -ForegroundColor Gray
-Write-Host "      Phase 9: Switch user + Hoan tat" -ForegroundColor Gray
+Write-Host "      Phase 3: Doi ten may + Join domain" -ForegroundColor Gray
+Write-Host "      Phase 4: Add domain user $domainUsername" -ForegroundColor Gray
+Write-Host "      Phase 5: Tat BitLocker" -ForegroundColor Gray
+Write-Host "      Phase 6: Cai Office $officeType" -ForegroundColor Gray
+Write-Host "      Phase 7: Cai Custom Apps" -ForegroundColor Gray
+Write-Host "      Phase 8: Cai Kaspersky$(if (-not $installKaspersky) {' (BO QUA)'})" -ForegroundColor Gray
+Write-Host "      Phase 9: Hoan tat + Switch user" -ForegroundColor Gray
 Write-Host ""
 Write-Warn "Khong can lam gi them. Co the bo di sang may khac."
 Write-Host ""

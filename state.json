@@ -1,0 +1,13 @@
+{
+  "currentPhase": 1,
+  "computerName": "TESTPC",
+  "domainUsername": "dinhpk",
+  "domainUserPassword": "dinh@6941",
+  "winVersion": "11",
+  "installKaspersky": false,
+  "officeType": "365",
+  "domainJoinAccount": "lab\dinhpk",
+  "domainJoinPassword": "dinh@6941",
+  "startTime": "2026-08-21 21:00:00",
+  "phaseLog": []
+}

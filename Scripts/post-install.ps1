@@ -1,4 +1,4 @@
-﻿# ================================================================
+# ================================================================
 # post-install.ps1 - Phase Executor chinh cua WinAuto v2
 # Chay tu dong sau moi lan restart, doc state.json de biet
 # dang o phase nao va tiep tuc chay phase tiep theo.
@@ -59,12 +59,12 @@ function Invoke-Phase {
     $phaseScript = switch ($PhaseNumber) {
         1 { Join-Path $phasesDir "phase1-drivers.ps1" }
         2 { Join-Path $phasesDir "phase2-upgrade-pro.ps1" }
-        3 { Join-Path $phasesDir "phase3-office.ps1" }
-        4 { Join-Path $phasesDir "phase4-kaspersky.ps1" }
-        5 { Join-Path $phasesDir "phase5-rename.ps1" }
-        6 { Join-Path $phasesDir "phase6-domain-join.ps1" }
-        7 { Join-Path $phasesDir "phase7-domain-user.ps1" }
-        8 { Join-Path $phasesDir "phase8-custom-apps.ps1" }
+        3 { Join-Path $phasesDir "phase3-domain-join.ps1" }
+        4 { Join-Path $phasesDir "phase4-domain-user.ps1" }
+        5 { Join-Path $phasesDir "phase5-bitlocker.ps1" }
+        6 { Join-Path $phasesDir "phase6-office.ps1" }
+        7 { Join-Path $phasesDir "phase7-custom-apps.ps1" }
+        8 { Join-Path $phasesDir "phase8-kaspersky.ps1" }
         9 { Join-Path $phasesDir "phase9-finalize.ps1" }
         default { $null }
     }

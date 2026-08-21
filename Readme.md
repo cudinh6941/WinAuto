@@ -3,11 +3,11 @@
 Hệ thống unattended install Windows phiên bản v2, thiết kế cho **batch on-site deployment** (cài nhiều máy cùng lúc tận nơi) — an toàn, tự động hoàn toàn với cơ chế Phase-based Auto-Resume sau mỗi lần restart.
 
 **Tự động hoàn toàn 9 phases:**
-Cài Windows → Cài Driver mạng → Nâng cấp Win Pro → Cài Office → Tắt BitLocker & Cài Kaspersky → Đổi tên máy → Join Domain → Add Domain User → Cài Custom Apps → Switch User.
+Cài Windows → Driver mạng → Upgrade Pro → Rename + Join Domain → Add Domain User → Tắt BitLocker → Cài Office → Custom Apps → Kaspersky → Finalize.
 
 ---
 
-## 📁 Cấu trúc thư mục mới
+## 📁 Cấu trúc thư mục
 
 ```text
 WinAuto/
@@ -23,19 +23,19 @@ WinAuto/
 │   ├── 3dpnet.exe                 ← Driver mạng offline
 │   │
 │   ├── lib/                       ← Thư viện dùng chung
-│   │   ├── common.ps1             ← Logging, DPAPI Encryption, Pending Reboot Detection
+│   │   ├── common.ps1             ← Logging, DPAPI, Reboot Detection, Retry, Dry-Run
 │   │   └── network.ps1            ← Xử lý kết nối WiFi / LAN
 │   │
 │   └── phases/                    ← Các script riêng cho từng phase
-│       ├── phase1-drivers.ps1
-│       ├── phase2-upgrade-pro.ps1
-│       ├── phase3-office.ps1
-│       ├── phase4-kaspersky.ps1
-│       ├── phase5-rename.ps1
-│       ├── phase6-domain-join.ps1
-│       ├── phase7-domain-user.ps1
-│       ├── phase8-custom-apps.ps1
-│       └── phase9-finalize.ps1
+│       ├── phase1-drivers.ps1     ← Driver mạng + kết nối WiFi/LAN
+│       ├── phase2-upgrade-pro.ps1 ← Upgrade Home → Pro
+│       ├── phase3-domain-join.ps1 ← Rename + Join Domain (ghép 2 bước, 1 restart)
+│       ├── phase4-domain-user.ps1 ← Add domain user vào local Administrators
+│       ├── phase5-bitlocker.ps1   ← Tắt BitLocker
+│       ├── phase6-office.ps1      ← Cài Office 365/2016
+│       ├── phase7-custom-apps.ps1 ← Cài Custom Apps (Chrome, Zalo, UltraViewer...)
+│       ├── phase8-kaspersky.ps1   ← Cài Kaspersky (cuối cùng, tránh block)
+│       └── phase9-finalize.ps1    ← Dọn dẹp, Telegram, switch user
 │
 ├── Software/                      ← 📦 Thư mục chứa bộ cài phần mềm
 │   ├── Office365/                 ← (Cần có OfficeSetup.exe)
@@ -53,8 +53,9 @@ WinAuto/
 ### Bước 1: Chuẩn bị chung (Làm 1 lần)
 
 1. Cập nhật file `config.json` với thông tin chung của đợt cài đặt:
+   - `testMode`: `true` để test dry-run, `false` khi chạy thật
    - Thông tin WiFi
-   - Domain name & OU
+   - Domain name, OU, DC IP, DNS servers
    - Path trỏ đến bộ cài Office / Kaspersky (trong thư mục `Software/`)
    - Product key để upgrade lên Win Pro
    - Telegram Bot token & Chat ID
@@ -79,7 +80,7 @@ Script sẽ yêu cầu bạn nhập 8 thông tin cho riêng máy này:
 7. Tài khoản dùng để Join Domain
 8. Mật khẩu của tài khoản Join Domain
 
-Sau khi nhập xong, nhấn Enter. **Bạn có thể bỏ đi sang máy khác**. Hệ thống sẽ tự động format ổ C: (giữ nguyên ổ Data), cài đặt Windows và tuần tự thực thi 9 phase cài đặt phần mềm & cấu hình hệ thống. Mọi lần restart bắt buộc (như sau khi Join Domain, Rename PC, cài Kaspersky) đều được hệ thống tự động nhận diện và resume.
+Sau khi nhập xong, nhấn Enter. **Bạn có thể bỏ đi sang máy khác**. Hệ thống sẽ tự động format ổ C: (giữ nguyên ổ Data), cài đặt Windows và tuần tự thực thi 9 phase cài đặt phần mềm & cấu hình hệ thống. Mọi lần restart bắt buộc (như sau khi Join Domain, Rename PC) đều được hệ thống tự động nhận diện và resume.
 
 ---
 
@@ -89,7 +90,7 @@ Sau khi nhập xong, nhấn Enter. **Bạn có thể bỏ đi sang máy khác**.
 |------------|-----------|
 | Partition C: (Windows) | ❌ **Bị format** — cài Windows mới |
 | Partition D:, E:, ... | ✅ **Giữ nguyên** — không bị đụng |
-| Mật khẩu Domain User & Join Domain | 🛡️ **Bảo mật DPAPI** — Được mã hóa an toàn trong `state.json` và chỉ có thể được giải mã trên chính máy đó. Sẽ tự động xóa sau khi cài xong. |
+| Mật khẩu Domain User & Join Domain | 🛡️ **Bảo mật DPAPI** — Được mã hóa an toàn trong `state.json` và chỉ có thể được giải mã trên chính máy đó. Sẽ tự động xóa sau khi cài xong (Phase 9). |
 
 ---
 
@@ -100,4 +101,32 @@ Tool sử dụng cơ chế **Phase-based State Machine** và **Pending Reboot De
 - Sau mỗi phase, script kiểm tra Registry xem Windows có đang cần restart không (CBS, Windows Update, File Rename, Computer Name thay đổi).
 - Nếu cần, máy tự động Restart. Một Scheduled Task tên `WinAuto_Resume` sẽ tự kích hoạt lại tiến trình ngay khi máy khởi động lên, tiếp tục từ phase chưa hoàn thành.
 - Nếu không cần Restart, hệ thống tự động chạy ngay Phase tiếp theo, tối ưu thời gian chờ đợi.
-- Khi Phase 9 hoàn tất, toàn bộ State, Auto-Logon và Scheduled Task dọn dẹp sẽ bị xóa sạch khỏi máy. Máy restart lần cuối để login trực tiếp vào tài khoản Domain User.
+- Khi Phase 9 hoàn tất, toàn bộ State, Auto-Logon và Scheduled Task sẽ bị xóa sạch khỏi máy. Máy restart lần cuối để login trực tiếp vào tài khoản Domain User.
+
+---
+
+## 🧪 Test Mode (Dry-Run)
+
+Set `"testMode": true` trong `config.json` để test flow mà **không thực thi** các lệnh nguy hiểm:
+- `Add-Computer`, `Rename-Computer` → chỉ log
+- `slmgr`, `DISM` upgrade → chỉ log
+- `Disable-BitLocker` → chỉ log
+- Installer (Office, Kaspersky, Custom Apps) → chỉ log
+- Kết nối mạng, Telegram → **vẫn chạy thật**
+- Cơ chế restart/resume → **vẫn chạy thật**
+
+---
+
+## 🔄 Thứ tự Phase (Tối ưu)
+
+| Phase | Nội dung | Restart? |
+|-------|----------|----------|
+| 1 | 🌐 Driver mạng + Kết nối WiFi/LAN | Có thể |
+| 2 | ⬆️ Upgrade Home → Pro | Có thể |
+| 3 | 💻 Rename + Join Domain (ghép 2 bước, tiết kiệm 1 restart) | Có |
+| 4 | 👤 Add domain user vào local Administrators | Không |
+| 5 | 🔒 Tắt BitLocker | Không |
+| 6 | 📎 Cài Office 365/2016 | Không |
+| 7 | 📦 Custom Apps (Chrome, Zalo, UltraViewer...) | Có thể |
+| 8 | 🛡️ Kaspersky (cuối cùng, tránh block installer) | Có thể |
+| 9 | 🏁 Finalize: Dọn dẹp, Telegram, switch user | Có (lần cuối) |
